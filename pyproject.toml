@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vfdb-stil"
+version = "0.1.0"
+description = "Einheitlicher Grafikstil für den vfdb-Leitfaden Ingenieurmethoden des Brandschutzes"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "vfdb Referat 4" }]
+requires-python = ">=3.11"   # matplotlib >= 3.11 verlangt Python >= 3.11
+keywords = ["Brandschutz", "Leitfaden", "matplotlib", "Abbildungen", "Stilvorlage"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: German",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+dependencies = [
+    "matplotlib>=3.11",   # Legendenzeilenabstand nach stil.yaml erst ab 3.11 (Test)
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "openpyxl>=3.1",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pypdf>=4"]
+# nur fuer Pflegende, die die Office-Vorlagen neu erzeugen (Windows mit Microsoft Office);
+# PyMuPDF steht unter AGPL-3.0 und wird nur lokal zum Messen der PDFs genutzt
+office = ["pywin32>=306; sys_platform == 'win32'", "pymupdf>=1.24"]
+
+[project.urls]
+Quellcode = "https://github.com/openbcl/vfdb_Ref4_Stilvorlagen"
+Fehlermeldungen = "https://github.com/openbcl/vfdb_Ref4_Stilvorlagen/issues"
+Anleitung = "https://github.com/openbcl/vfdb_Ref4_Stilvorlagen#readme"
+
+[project.scripts]
+vfdb-abbildung = "vfdb_stil.excel:main"
+vfdb-farbpruefung = "vfdb_stil.farbpruefung:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["python/vfdb_stil"]
+
+# stil/stil.yaml ist die einzige Quelle der Stilwerte; sie wird ins Paket kopiert.
+[tool.hatch.build.targets.wheel.force-include]
+"stil/stil.yaml" = "vfdb_stil/stil.yaml"
+
+# Quellpaket nur mit dem Paketcode (MIT) und der README (Beschreibung des Pakets);
+# Tests, Vorlagen und Doku liegen im Repository
+[tool.hatch.build.targets.sdist]
+include = ["/python/", "/stil/", "/pyproject.toml", "/LICENSE", "/README.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

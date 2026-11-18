@@ -1,0 +1,18 @@
+# Textdateien im Repository mit LF; Windows-Batchdateien mit CRLF
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binaerdateien (Office-Vorlagen, Schriften, Abbildungen)
+*.pdf   binary
+*.png   binary
+*.xlsx  binary
+*.xlsm  binary
+*.xltx  binary
+*.xltm  binary
+*.crtx  binary
+*.thmx  binary
+*.pptx  binary
+*.potx  binary
+*.otf   binary
+*.ttf   binary

@@ -1,0 +1,125 @@
+% Automatisch erzeugt aus stil/stil.yaml mit latex/erzeuge_werte.py.
+% Nicht von Hand aendern - Werte nur in stil/stil.yaml pflegen.
+% SPDX-License-Identifier: MIT
+\def\vfdbStilVersion{0.1.0}
+
+% Farben (feste Reihenfolge)
+\definecolor{vfdbFarbe1}{HTML}{2A78D6}  % blau
+\definecolor{vfdbFarbe2}{HTML}{EB6834}  % orange
+\definecolor{vfdbFarbe3}{HTML}{1BAF7A}  % tuerkis
+\definecolor{vfdbFarbe4}{HTML}{EDA100}  % gelb
+\definecolor{vfdbFarbe5}{HTML}{E87BA4}  % rosa
+\definecolor{vfdbFarbe6}{HTML}{008300}  % gruen
+\definecolor{vfdbFarbe7}{HTML}{6250D6}  % violett
+\definecolor{vfdbFarbe8}{HTML}{E34948}  % rot
+\definecolor{vfdbText}{HTML}{0B0B0B}
+\definecolor{vfdbGrau}{HTML}{52514E}
+\definecolor{vfdbGrauHell}{HTML}{D9D8D4}
+\definecolor{vfdbGrauFlaeche}{HTML}{ECEBE7}
+\def\vfdbFlaecheDeckkraft{0.18}
+
+% Schrift
+\def\vfdbSchriftText{TeX Gyre Heros}
+\def\vfdbSchriftFormel{Fira Math}
+\def\vfdbPtBeschriftung{9}
+\def\vfdbPtTicks{8}
+\def\vfdbPtLegende{8}
+\def\vfdbZeilenabstand{1.1}
+
+% Formate (Masse in mm): \vfdb@<format>@<groesse>
+\@namedef{vfdb@standard@breite}{124}
+\@namedef{vfdb@standard@achse_b}{103}
+\@namedef{vfdb@standard@achse_h}{64}
+\@namedef{vfdb@standard@rand_links}{17}
+\@namedef{vfdb@standard@rand_rechts}{4}
+\@namedef{vfdb@standard@rand_oben}{3}
+\@namedef{vfdb@standard@rand_unten}{10}
+\@namedef{vfdb@zweifeldrig@breite}{124}
+\@namedef{vfdb@zweifeldrig@achse_b}{103}
+\@namedef{vfdb@zweifeldrig@achse_h}{40}
+\@namedef{vfdb@zweifeldrig@feldabstand}{4}
+\@namedef{vfdb@zweifeldrig@rand_links}{17}
+\@namedef{vfdb@zweifeldrig@rand_rechts}{4}
+\@namedef{vfdb@zweifeldrig@rand_oben}{3}
+\@namedef{vfdb@zweifeldrig@rand_unten}{10}
+\@namedef{vfdb@breit@breite}{155}
+\@namedef{vfdb@breit@achse_b}{134}
+\@namedef{vfdb@breit@achse_h}{82.8}
+\@namedef{vfdb@breit@rand_links}{17}
+\@namedef{vfdb@breit@rand_rechts}{4}
+\@namedef{vfdb@breit@rand_oben}{3}
+\@namedef{vfdb@breit@rand_unten}{10}
+
+% Zuordnung der Farben
+\definecolor{vfdbAchsenfarbe}{HTML}{0B0B0B}  % text
+\definecolor{vfdbGitterfarbe}{HTML}{D9D8D4}  % grau_hell
+\definecolor{vfdbHilfsfarbe}{HTML}{52514E}  % grau
+\definecolor{vfdbPfeilfarbe}{HTML}{0B0B0B}  % text
+
+% Zahlen
+\def\vfdbSisetup{locale=DE, output-decimal-marker={,}, group-digits=none, per-mode=symbol}
+\def\vfdbDezimalkomma{true}
+\def\vfdbMinuszeichen{\textminus}
+\def\vfdbExponentAb{1e+06}
+\def\vfdbExponentUnter{0.0001}
+
+% Achsen (Schalter)
+\def\vfdbTickAusrichtung{inside}
+\def\vfdbNebenticks{false}
+\def\vfdbGitter{true}
+\def\vfdbObenRechts{0}
+\def\vfdbAchseUeberDaten{false}
+\def\vfdbDatenrand{0}
+\def\vfdbFormatliste{standard, zweifeldrig, breit}
+\def\vfdbLegendeRahmen{none}
+\def\vfdbMassBeidseitig{1}
+
+% Achsen, Linien, Pfeile (pt) und Abstaende (mm)
+\def\vfdbAchseLinie{0.6pt}
+\def\vfdbTickLaenge{3pt}
+\def\vfdbTickLinie{0.6pt}
+\def\vfdbTickAbstand{3.5pt}
+\def\vfdbGitterLinie{0.4pt}
+\def\vfdbTitelAbstandY{12mm}
+\def\vfdbTitelAbstandX{5mm}
+\def\vfdbDatenLinie{1.4pt}
+\def\vfdbDuennLinie{1pt}
+\def\vfdbHilfsLinie{0.8pt}
+\def\vfdbHilfsMuster{dash pattern=on 2.96pt off 1.28pt}
+\def\vfdbMarkerRadius{2pt}
+\def\vfdbPfeilLinie{0.6pt}
+\def\vfdbSpitzeAchse{3.6pt 1}
+\def\vfdbSpitzeHinweis{2.8pt 1}
+\def\vfdbSpitzeMass{2.4pt 1}
+\def\vfdbHinweisAbstandText{3pt}
+\def\vfdbHinweisAbstandZiel{1.5pt}
+\def\vfdbLegendeAbstand{11.5mm}
+\def\vfdbLegendeZeile{4.25mm}
+\def\vfdbLegendeAbstandMM{11.5}
+\def\vfdbLegendeZeileMM{4.25}
+\def\vfdbLegendeZuschlagMM{1}
+\def\vfdbLegendeSpaltenHoechstens{3}
+\def\vfdbLegendeSpaltenAbEintraegen{5}
+\@namedef{vfdb@spalten@1}{1}
+\@namedef{vfdb@spalten@2}{2}
+\@namedef{vfdb@spalten@3}{3}
+\@namedef{vfdb@spalten@4}{2}
+\@namedef{vfdb@spalten@5}{3}
+\def\vfdbLegendeSymbol{19.2pt}
+\def\vfdbLegendeTextabstand{6.4pt}
+\def\vfdbLegendeSpalten{9.6pt}
+\def\vfdbPhasenAbstand{8}
+\def\vfdbPhasengrenzeOben{1.4}
+\def\vfdbPhasengrenzeUnten{0.8}
+\def\vfdbPhasentext{1.3}
+
+% Linienstile der Reihen (fuer Datenlinien)
+\@namedef{vfdb@strich@1}{solid}
+\@namedef{vfdb@strich@2}{dash pattern=on 5.18pt off 2.24pt}
+\@namedef{vfdb@strich@3}{dash pattern=on 1.4pt off 2.31pt}
+\@namedef{vfdb@strich@4}{dash pattern=on 8.96pt off 2.24pt on 1.4pt off 2.24pt}
+\@namedef{vfdb@strich@5}{dash pattern=on 7pt off 2.1pt on 1.4pt off 2.1pt on 1.4pt off 2.1pt}
+\@namedef{vfdb@strich@6}{dash pattern=on 1.4pt off 1.4pt}
+\@namedef{vfdb@strich@7}{dash pattern=on 12.6pt off 3.5pt}
+\@namedef{vfdb@strich@8}{solid}
+\def\vfdbAnzahlFarben{8}

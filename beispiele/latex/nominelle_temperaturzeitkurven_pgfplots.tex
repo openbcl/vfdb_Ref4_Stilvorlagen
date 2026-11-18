@@ -1,0 +1,25 @@
+% Beispiel Diagramm (PGFPlots): nominelle Temperaturzeitkurven nach DIN EN 1991-1-2, 3.2.
+% Gegenstueck zu beispiele/python/nominelle_temperaturzeitkurven.py.
+\documentclass[border=0pt]{standalone}
+\usepackage[ngerman]{babel}
+\usepackage[schriften]{vfdbstil}
+
+\begin{document}
+\begin{tikzpicture}
+  \vfdbRahmen[standard]{\vfdbRandLegende{2}}{3}   % unterer Rand fuer eine zweizeilige Legende
+  \begin{axis}[vfdb=standard,
+      xmin=0, xmax=120, xtick distance=15,
+      ymin=0, ymax=1200, ytick distance=200,
+      xlabel={Zeit $t$ in \si{\minute}},
+      ylabel={Gastemperatur $T$ in \si{\degreeCelsius}},
+      legend columns=2,
+      domain=0:120, samples=400]
+    \addplot {20 + 345*log10(8*x + 1)};
+    \addlegendentry{Einheits-Temperaturzeitkurve (ETK)}
+    \addplot {20 + 1080*(1 - 0.325*exp(-0.167*x) - 0.675*exp(-2.5*x))};
+    \addlegendentry{Hydrokarbonkurve}
+    \addplot {20 + 660*(1 - 0.687*exp(-0.32*x) - 0.313*exp(-3.8*x))};
+    \addlegendentry{Außenbrandkurve}
+  \end{axis}
+\end{tikzpicture}
+\end{document}

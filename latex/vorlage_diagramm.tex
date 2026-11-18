@@ -1,0 +1,46 @@
+% Vorlage Diagramm (PGFPlots) im Leitfaden-Stil
+%
+% Uebersetzen mit LuaLaTeX. Im selben Ordner muessen liegen:
+%   vfdbstil.sty, vfdbstil-werte.tex   (und ggf. die Datendatei)
+% Ergebnis: PDF in fester Groesse -> in Overleaf nach media/ hochladen und
+% ohne Skalierung einbinden: \includegraphics{media/XX-name.pdf}
+%
+% WICHTIG: Die Abbildung hat eine feste Groesse. Was ausserhalb liegt (z. B. eine
+% Legendenzeile zu viel), wird ohne Warnung abgeschnitten - das PDF ansehen.
+% SPDX-License-Identifier: MIT
+\documentclass[border=0pt]{standalone}
+\usepackage[ngerman]{babel}
+\usepackage[schriften]{vfdbstil}
+
+\begin{document}
+\begin{tikzpicture}
+  % [Format]{unterer Rand mm}{oberer Rand mm}
+  % unterer Rand: ohne Legende 10; mit Legende \vfdbRandEintraege{<Zahl der Legendeneintraege>}
+  % (dieselbe Zahl wie bei "vfdb legende" unten)
+  \vfdbRahmen[standard]{\vfdbRandEintraege{2}}{3}
+  \begin{axis}[vfdb=standard,          % standard | breit (zweifeldrig: siehe Anleitung)
+      xmin=0, xmax=10, xtick distance=2,
+      ymin=0, ymax=100, ytick distance=20,
+      xlabel={Zeit $t$ in \si{\minute}},
+      ylabel={Temperatur $T$ in \si{\degreeCelsius}},
+      vfdb legende=2]                  % Zahl der Legendeneintraege (waehlt die Spalten)
+    % Reihen erhalten Farbe und Linienstil automatisch in fester Reihenfolge
+    \addplot table[x=t, y=A, col sep=semicolon] {
+      t;A;B
+      0;20;20
+      5;60;45
+      10;90;70
+    };
+    \addlegendentry{Messung A}
+    \addplot table[x=t, y=B, col sep=semicolon] {
+      t;A;B
+      0;20;20
+      5;60;45
+      10;90;70
+    };
+    \addlegendentry{Messung B}
+    % Daten aus einer Datei (CSV mit Dezimalpunkt, Semikolon getrennt):
+    % \addplot table[x=t, y=A, col sep=semicolon] {daten.csv};
+  \end{axis}
+\end{tikzpicture}
+\end{document}

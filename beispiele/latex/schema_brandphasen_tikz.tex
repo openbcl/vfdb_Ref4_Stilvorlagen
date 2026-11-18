@@ -1,0 +1,37 @@
+% Beispiel Schema (TikZ): schematisierter Brandverlauf mit Brandphasen.
+% Gegenstueck zu beispiele/python/schema_brandphasen.py - beide Wege ergeben dieselbe Abbildung.
+% Koordinaten in mm; Ursprung = Schnittpunkt der Achsen; Achsenflaeche 103 x 64 mm.
+\documentclass[border=0pt]{standalone}
+\usepackage[ngerman]{babel}
+\usepackage[schriften]{vfdbstil}
+
+\begin{document}
+\begin{vfdbschema}[standard]{14}{3}
+  % Lage der Phasengrenzen und Hoehe des Plateaus (mm)
+  \pgfmathsetmacro\tA{26.24}  \pgfmathsetmacro\tB{62.19}  \pgfmathsetmacro\tC{87.45}
+  \pgfmathsetmacro\qV{42.67}
+
+  \fill[vfdb flaeche] (0,0) -- plot[domain=0:\tA, samples=100] (\x, {\qV*(\x/\tA)^2})
+                      -- (\tB, \qV) -- (\tC, 0) -- cycle;
+  \draw[vfdb hilfslinie] (\tA, 0) -- (\tA, \qV);
+  \draw[vfdb hilfslinie] (\tB, 0) -- (\tB, \qV);
+  \draw[vfdb kurve=1] plot[domain=0:\tA, samples=100] (\x, {\qV*(\x/\tA)^2})
+                      -- (\tB, \qV) -- (\tC, 0);
+
+  \vfdbPfeilachsen{Wärmefreisetzungsrate $\dot{Q}$}
+
+  % Hinweise: Pfeile waagerecht bzw. senkrecht
+  \pgfmathsetmacro\xg{20.40}  \pgfmathsetmacro\qg{\qV*(19.43/\tA)^2}
+  \node[anchor=west] (formel) at (32.07, \qg) {$\dot{Q}=\alpha\cdot t^{2}$};
+  \draw[vfdb hinweis] (formel.west) -- (\xg, \qg);
+  \node[anchor=south] (last) at (\tB, 56.89) {70 \% der Brandlast\\verbrannt};
+  \draw[vfdb hinweis] (last.south) -- (\tB, \qV + 1.07);
+
+  \vfdbXmarke{\tA}{$t_{1}$}  \vfdbXmarke{\tB}{$t_{2}$}  \vfdbXmarke{\tC}{$t_{3}$}
+  \vfdbYmarke{\qV}{$\dot{Q}_\mathrm{max}$}
+
+  \vfdbPhase{0}{\tA}{Brandausbreitung}
+  \vfdbPhase{\tA}{\tB}{Vollbrandphase}
+  \vfdbPhase{\tB}{\tC}{Abklingphase}
+\end{vfdbschema}
+\end{document}

@@ -1,0 +1,39 @@
+% Vorlage Schema / Prinzipskizze (TikZ) im Leitfaden-Stil
+%
+% Uebersetzen mit LuaLaTeX. Im selben Ordner muessen liegen:
+%   vfdbstil.sty, vfdbstil-werte.tex
+% Ergebnis: PDF in fester Groesse -> in Overleaf nach media/ hochladen und
+% ohne Skalierung einbinden: \includegraphics{media/XX-name.pdf}
+%
+% Koordinaten in mm, Ursprung = Schnittpunkt der Achsen.
+% Achsenflaeche: \vfdbB x \vfdbH (Standard 103 x 64 mm).
+% SPDX-License-Identifier: MIT
+\documentclass[border=0pt]{standalone}
+\usepackage[ngerman]{babel}
+\usepackage[schriften]{vfdbstil}
+
+\begin{document}
+% [Format]{unterer Rand mm}{oberer Rand mm}; mit Phasenbalken unten ca. 14 mm
+\begin{vfdbschema}[standard]{14}{3}
+  % Flaeche und Kurve
+  \fill[vfdb flaeche] (0,0) -- plot[domain=0:40, samples=60] (\x, {40*(\x/40)^2})
+                      -- (70, 40) -- (90, 0) -- cycle;
+  \draw[vfdb kurve=1] plot[domain=0:40, samples=60] (\x, {40*(\x/40)^2}) -- (70, 40) -- (90, 0);
+  \draw[vfdb hilfslinie] (40, 0) -- (40, 40);
+
+  % Achsen als Pfeile
+  \vfdbPfeilachsen{Wärmefreisetzungsrate $\dot{Q}$}
+
+  % Hinweis: Pfeil waagerecht oder senkrecht
+  \node[anchor=west] (h) at (50, 20) {Beschriftung};
+  \draw[vfdb hinweis] (h.west) -- (32, 20);
+
+  % Beschriftungen an den Achsen (8 pt)
+  \vfdbXmarke{40}{$t_{1}$}
+  \vfdbYmarke{40}{$\dot{Q}_\mathrm{max}$}   % beschreibender Index aufrecht
+
+  % Phasen unter der Zeitachse
+  \vfdbPhase{0}{40}{Phase 1}
+  \vfdbPhase{40}{90}{Phase 2}
+\end{vfdbschema}
+\end{document}

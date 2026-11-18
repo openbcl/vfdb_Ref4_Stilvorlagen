@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+
+# LaTeX-Hilfsdateien und lokal uebersetzte Vorlagen
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.out
+*.toc
+*.xdv
+*.bbl
+*.blg
+latex/*.pdf
+
+# Ausgaben von Anwendern (z. B. vfdb-abbildung --ziel media)
+media/
+
+# Office: Sperrdateien und Test-PDFs des Generators
+~$*
+office/test/
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

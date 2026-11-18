@@ -1,0 +1,434 @@
+% vfdbstil.sty - Grafikstil fuer den vfdb-Leitfaden Ingenieurmethoden des Brandschutzes
+% TikZ-Schemata und PGFPlots-Diagramme im Stil der Python-Abbildungen (vfdb_stil).
+%
+% Gebrauch in einem standalone-Dokument (siehe latex/vorlage_schema.tex):
+%   \documentclass[border=0pt]{standalone}
+%   \usepackage[ngerman]{babel}
+%   \usepackage[schriften]{vfdbstil}
+%
+% Option "schriften": Schriften TeX Gyre Heros / Fira Math (wie der Leitfaden), Textfarbe
+% und siunitx-Einstellungen der Abbildungen. Nur fuer eigenstaendige Abbildungsdokumente;
+% braucht LuaLaTeX oder XeLaTeX.
+%
+% Benoetigt vfdbstil-werte.tex (erzeugt aus stil/stil.yaml) im selben Ordner.
+% Setzt \pgfplotsset{compat=1.18}.
+% SPDX-License-Identifier: MIT
+% Copyright (c) 2026 vfdb Referat 4
+\NeedsTeXFormat{LaTeX2e}[2022/06/01]
+\ProvidesPackage{vfdbstil}[2026/11/18 v0.1.0 Grafikstil vfdb-Leitfaden]
+
+\newif\ifvfdb@schriften
+\DeclareOption{schriften}{\vfdb@schriftentrue}
+\ProcessOptions\relax
+
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,calc}
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\RequirePackage{siunitx}
+\@ifpackageloaded{mhchem}{}{\RequirePackage[version=4]{mhchem}}
+
+\input{vfdbstil-werte.tex}
+
+% Dezimalzeichen nach stil.yaml
+\def\vfdb@wahr{true}
+\ifx\vfdbDezimalkomma\vfdb@wahr
+  \pgfkeys{/pgf/number format/vfdb dezimal/.style={/pgf/number format/use comma}}
+\else
+  \pgfkeys{/pgf/number format/vfdb dezimal/.style={/pgf/number format/use period}}
+\fi
+
+\ifvfdb@schriften
+  \RequirePackage{iftex}
+  \ifTUTeX\else
+    \PackageError{vfdbstil}{Option 'schriften' braucht LuaLaTeX (oder XeLaTeX)}
+      {Bitte mit lualatex uebersetzen (Overleaf: Menue > Compiler > LuaLaTeX).}
+  \fi
+  \RequirePackage{fontspec}
+  \RequirePackage{unicode-math}
+  \setmainfont{\vfdbSchriftText}
+  \setsansfont{\vfdbSchriftText}
+  \setmathfont{\vfdbSchriftFormel}
+  \expandafter\sisetup\expandafter{\vfdbSisetup}
+  \AtBeginDocument{\color{vfdbText}}
+  % Seitenbreite ins Protokoll (bauen.py prueft sie gegen die Formatbreiten)
+  \AtEndDocument{\typeout{vfdbstil-Seitenbreite:
+    \ifdefined\pagewidth\the\pagewidth\else\the\pdfpagewidth\fi}}
+\fi
+
+% --- Schriftgroessen --------------------------------------------------------------
+\newcommand\vfdbGross{\fontsize{\vfdbPtBeschriftung}{\fpeval{\vfdbPtBeschriftung*\vfdbZeilenabstand}}\selectfont}
+\newcommand\vfdbKlein{\fontsize{\vfdbPtTicks}{\fpeval{\vfdbPtTicks*\vfdbZeilenabstand}}\selectfont}
+\newcommand\vfdbLegendeSchrift{\fontsize{\vfdbPtLegende}{\fpeval{\vfdbPtLegende*\vfdbZeilenabstand}}\selectfont}
+
+% --- Formatwerte ------------------------------------------------------------------
+% \vfdbWert{<format>}{<groesse>}  z. B. \vfdbWert{standard}{achse_b} -> 103 (mm)
+\newcommand\vfdbWert[2]{%
+  \ifcsname vfdb@#1@#2\endcsname
+    \csname vfdb@#1@#2\endcsname
+  \else
+    0%
+  \fi}
+% Fehlermeldung bei unbekanntem Format (gibt nichts aus)
+\newcommand\vfdb@formatpruefung[1]{%
+  \ifcsname vfdb@#1@achse_b\endcsname\else
+    \PackageError{vfdbstil}{Unbekanntes Format '#1' (erlaubt: \vfdbFormatliste)}%
+      {Formatnamen klein schreiben, z. B. [standard].}%
+  \fi}
+
+% --- Zahlen ------------------------------------------------------------------------
+% \vfdbZahl[<gueltige Stellen>]{<Zahl>}: Dezimalkomma, keine Tausendertrennung, echtes
+% Minuszeichen, in der Textschrift; auf <gueltige Stellen> (Standard 10, wie Python) gerundet;
+% sehr grosse/kleine Betraege als a*10^n. Feste Nachkommastellen an Achsen: Schluessel
+% "vfdb nachkomma x/y=<n>" in den Achsenoptionen; in Text/TikZ "vfdb nachkomma=<n>".
+\ExplSyntaxOn
+\tl_new:N \l__vfdb_nachkomma_tl
+\tl_new:N \l__vfdb_wert_tl
+\tl_new:N \l__vfdb_exponent_tl     % leer = je Zahl entscheiden, 1/0 = fuer die ganze Achse
+\tl_new:N \l__vfdb_min_tl
+\tl_new:N \l__vfdb_max_tl
+\tl_new:N \l__vfdb_abstand_tl
+\tl_new:N \l__vfdb_lo_tl
+\tl_new:N \l__vfdb_hi_tl
+\tl_new:N \l__vfdb_tick_tl
+\tl_new:N \l__vfdb_toleranz_tl
+\cs_new_protected:Npn \vfdb@nachkommasetzen #1 { \tl_set:Nn \l__vfdb_nachkomma_tl {#1} }
+\NewDocumentCommand\vfdbZahl{O{10}m}{ \__vfdb_zahl:nn {#2} {#1} }
+\cs_new_protected:Npn \__vfdb_zahl:nn #1#2
+  {
+    \fp_compare:nTF { abs(#1) = 0 }
+      { \__vfdb_zahl_fest:n { 0 } }
+      {
+        % erst auf gueltige Stellen runden, dann die Schreibweise waehlen (wie Python)
+        \tl_set:Nx \l__vfdb_wert_tl
+          { \fp_eval:n { round(#1, #2 - 1 - floor(ln(abs(#1)) / ln(10))) } }
+        \tl_if_empty:NTF \l__vfdb_exponent_tl
+          {
+            \fp_compare:nTF { \vfdbExponentUnter <= abs(\l__vfdb_wert_tl) < \vfdbExponentAb }
+              { \__vfdb_zahl_fest:V \l__vfdb_wert_tl }
+              { \__vfdb_zahl_exponent:V \l__vfdb_wert_tl }
+          }
+          {
+            \int_compare:nNnTF { \l__vfdb_exponent_tl } = { 1 }
+              { \__vfdb_zahl_exponent:V \l__vfdb_wert_tl }
+              { \__vfdb_zahl_fest:V \l__vfdb_wert_tl }
+          }
+      }
+  }
+\cs_new_protected:Npn \__vfdb_zahl_fest:n #1
+  {
+    \tl_if_empty:NTF \l__vfdb_nachkomma_tl
+      {
+        \fp_compare:nNnT {#1} < {0} { \mode_if_math:TF { - } { \vfdbMinuszeichen } }
+        % precision=15: der bereits auf gueltige Stellen gerundete Wert erscheint vollstaendig
+        \pgfmathprintnumber[fixed, precision=15, vfdb~dezimal, 1000~sep={},
+          assume~math~mode=true] { \fp_eval:n { abs(#1) } }
+      }
+      {
+        % kaufmaennisch runden (ab 5 auf, wie Python), Vorzeichen erst danach (kein "-0,00")
+        \tl_set:Nx \l__vfdb_wert_tl
+          { \fp_eval:n { sign(#1) * trunc(abs(#1) * 10^(\l__vfdb_nachkomma_tl) + 0.5)
+                         / 10^(\l__vfdb_nachkomma_tl) } }
+        \fp_compare:nNnT { \l__vfdb_wert_tl } < {0}
+          { \mode_if_math:TF { - } { \vfdbMinuszeichen } }
+        \pgfmathprintnumber[fixed, fixed~zerofill, precision=\l__vfdb_nachkomma_tl,
+          vfdb~dezimal, 1000~sep={}, assume~math~mode=true]
+          { \fp_eval:n { abs(\l__vfdb_wert_tl) } }
+      }
+  }
+\cs_new_protected:Npn \__vfdb_zahl_exponent:n #1
+  {
+    \tl_if_empty:NTF \l__vfdb_nachkomma_tl
+      {
+        \ensuremath{\pgfmathprintnumber[sci, precision=6, sci~zerofill=false, vfdb~dezimal]
+          { \fp_to_scientific:n {#1} }}
+      }
+      {
+        \ensuremath{\pgfmathprintnumber[sci, precision=\l__vfdb_nachkomma_tl, sci~zerofill,
+          vfdb~dezimal] { \fp_to_scientific:n {#1} }}
+      }
+  }
+\cs_generate_variant:Nn \__vfdb_zahl_fest:n { V }
+\cs_generate_variant:Nn \__vfdb_zahl_exponent:n { V }
+% Tick-Beschriftung je Achse (#1 = x oder y): lineare Achsen wie \vfdbZahl, auf 7 gueltige
+% Stellen gerundet (entfernt das Rechenrauschen der Tick-Berechnung), mit den Nachkomma-
+% stellen dieser Achse; logarithmische Achsen behalten 10^n.
+% Schreibweise a*10^n einheitlich fuer die ganze Achse wie bei Python nach den Teilstrichen:
+% groesster Betrag ab exponent_ab oder kleinster Betrag ungleich 0 unter exponent_unter.
+% Teilstriche = Vielfache des Abstands zwischen den Achsgrenzen. Abstand: <#1>tick distance,
+% sonst wie PGFPlots selbst ihn waehlt (pgfplotsticks.code.tex: Zahl der Teilstriche
+% n = max(trunc(Achsenlaenge / max space between ticks) + 1, try min ticks), Abstand =
+% Spanne / (n - 1), Mantisse gerundet auf 1, 2, 5 oder 10). Rechenrauschen der Teilstriche
+% (999000.1 statt 999000) wird auf dieses Raster gesetzt.
+\cs_new_protected:Npn \__vfdb_sci:N #1 { \pgfmathfloattosci {#1} }   % #1: Makro mit PGF-Float
+\cs_new_protected:Npn \__vfdb_grenze:Nn #1#2
+  {
+    \exp_args:Nc \__vfdb_sci:N { pgfplots@#2@unscaled@as@float }
+    \tl_set_eq:NN #1 \pgfmathresult
+  }
+\cs_new_protected:Npn \vfdb@ticklinear #1
+  {
+    \group_begin:
+      \tl_set:Nv \l__vfdb_nachkomma_tl { vfdb@nk@#1 }
+      \tl_set:Nx \l__vfdb_tick_tl { \tick }
+      % tatsaechliche Achsgrenzen (auch ohne #1min/#1max)
+      \__vfdb_grenze:Nn \l__vfdb_min_tl { #1min }
+      \__vfdb_grenze:Nn \l__vfdb_max_tl { #1max }
+      \tl_set:Nx \l__vfdb_abstand_tl { \pgfkeysvalueof { /pgfplots/#1tick~distance } }
+      \tl_if_empty:NTF \l__vfdb_abstand_tl
+        {
+          \tl_set:Nx \l__vfdb_abstand_tl
+            {
+              \fp_eval:n
+                {
+                  abs(\l__vfdb_max_tl - \l__vfdb_min_tl)
+                  / ( max( trunc( \dim_to_fp:n { \use:c { pgfplotspoint#1axislength } }
+                                  / \axisdefaulttickwidth ) + 1, \axisdefaulttryminticks ) - 1 )
+                }
+            }
+          \fp_compare:nT { \l__vfdb_abstand_tl > 0 }
+            {
+              \tl_set:Nx \l__vfdb_lo_tl { \fp_eval:n { 10 ^ floor(ln(\l__vfdb_abstand_tl) / ln(10)) } }
+              \tl_set:Nx \l__vfdb_hi_tl { \fp_eval:n { \l__vfdb_abstand_tl / \l__vfdb_lo_tl } }
+              \tl_set:Nx \l__vfdb_abstand_tl
+                {
+                  \fp_eval:n
+                    {
+                      ( \l__vfdb_hi_tl < 1.5 ? 1 : \l__vfdb_hi_tl < 3.5 ? 2
+                        : \l__vfdb_hi_tl < 7.5 ? 5 : 10 ) * \l__vfdb_lo_tl
+                    }
+                }
+            }
+        }
+        { \tl_set:Nx \l__vfdb_abstand_tl { \fp_eval:n { abs( \l__vfdb_abstand_tl ) } } } % auch 5*60
+      \fp_compare:nTF { \l__vfdb_abstand_tl > 0 }
+        {
+          \fp_compare:nT
+            {
+              abs(\tick - round(\tick / \l__vfdb_abstand_tl) * \l__vfdb_abstand_tl)
+              < max(1e-3 * \l__vfdb_abstand_tl, 1e-6 * abs(\tick))
+            }
+            {
+              \tl_set:Nx \l__vfdb_tick_tl
+                { \fp_eval:n { round(\tick / \l__vfdb_abstand_tl) * \l__vfdb_abstand_tl } }
+            }
+          % erster und letzter Teilstrich; PGFPlots zeichnet auch Teilstriche bis
+          % <#1>tick placement tolerance (0,05 pt) ausserhalb der Achse
+          \tl_set:Nx \l__vfdb_toleranz_tl
+            {
+              \fp_eval:n
+                {
+                  \dim_to_fp:n { \pgfkeysvalueof { /pgfplots/#1tick~placement~tolerance } }
+                  / \dim_to_fp:n { \use:c { pgfplotspoint#1axislength } }
+                  * abs(\l__vfdb_max_tl - \l__vfdb_min_tl)
+                }
+            }
+          \tl_set:Nx \l__vfdb_lo_tl
+            {
+              \fp_eval:n
+                { ceil((\l__vfdb_min_tl - \l__vfdb_toleranz_tl) / \l__vfdb_abstand_tl - 1e-9) * \l__vfdb_abstand_tl }
+            }
+          \tl_set:Nx \l__vfdb_hi_tl
+            {
+              \fp_eval:n
+                { floor((\l__vfdb_max_tl + \l__vfdb_toleranz_tl) / \l__vfdb_abstand_tl + 1e-9) * \l__vfdb_abstand_tl }
+            }
+          \fp_compare:nTF
+            {
+              max(abs(\l__vfdb_lo_tl), abs(\l__vfdb_hi_tl)) >= \vfdbExponentAb
+              || ( (\l__vfdb_lo_tl <= 0 && \l__vfdb_hi_tl >= 0)
+                   ? abs(\l__vfdb_abstand_tl)
+                   : min(abs(\l__vfdb_lo_tl), abs(\l__vfdb_hi_tl)) ) < \vfdbExponentUnter
+            }
+            { \tl_set:Nn \l__vfdb_exponent_tl { 1 } }
+            { \tl_set:Nn \l__vfdb_exponent_tl { 0 } }
+        }
+        { \tl_clear:N \l__vfdb_exponent_tl }   % Spanne 0: je Zahl
+      \vfdbZahl[7]{\l__vfdb_tick_tl}
+    \group_end:
+  }
+\ExplSyntaxOff
+\newcommand\vfdb@ticklabel[1]{%
+  \csname ifpgfplots@#1islinear\endcsname
+    \vfdb@ticklinear{#1}%
+  \else
+    \axisdefaultticklabellog
+  \fi}
+\def\vfdb@nk@x{}\def\vfdb@nk@y{}
+\pgfkeys{/tikz/vfdb nachkomma/.code={\vfdb@nachkommasetzen{#1}}}
+
+% --- TikZ-Stile -------------------------------------------------------------------
+\newcommand\vfdb@reihenpruefung[1]{%
+  \ifcsname vfdb@strich@#1\endcsname\else
+    \PackageError{vfdbstil}{Reihe '#1' gibt es nicht (1 bis \vfdbAnzahlFarben)}%
+      {Mehr Reihen zusammenfassen oder auf mehrere Felder verteilen.}%
+  \fi}
+\tikzset{
+  vfdb/.style={x=1mm, y=1mm, font=\vfdbGross, line join=miter,
+    every node/.append style={inner sep=0pt, outer sep=0pt, align=center}},
+  vfdb achse/.style={line width=\vfdbPfeilLinie, draw=vfdbPfeilfarbe,
+    -{Triangle[length=\vfdbSpitzeAchse, width=\vfdbSpitzeAchse, round]}},
+  vfdb hinweis/.style={line width=\vfdbPfeilLinie, draw=vfdbPfeilfarbe,
+    -{Triangle[length=\vfdbSpitzeHinweis, width=\vfdbSpitzeHinweis, round]},
+    shorten <=\vfdbHinweisAbstandText, shorten >=\vfdbHinweisAbstandZiel},
+  vfdb reihe/.style={line width=\vfdbDatenLinie,
+    /utils/exec={\vfdb@reihenpruefung{#1}\edef\vfdb@m{\csname vfdb@strich@#1\endcsname}},
+    % Linie, Fuellungen und Marker in der Farbe der Reihe (auch mit eigenen mark options),
+    % Beschriftungen (node) in Textfarbe, Markerumriss durchgezogen
+    color=vfdbFarbe#1, text=vfdbText, vfdb@muster,
+    /tikz/every mark/.append style={solid}},
+  vfdb reihe/.default=1,
+  vfdb@muster/.code={\expandafter\tikzset\expandafter{\vfdb@m}},
+  vfdb kurve/.style={line width=\vfdbDatenLinie, draw=vfdbFarbe#1},
+  vfdb kurve/.default=1,
+  vfdb duenn/.style={line width=\vfdbDuennLinie, draw=vfdbFarbe#1},
+  vfdb duenn/.default=1,
+  vfdb hilfslinie/.style={line width=\vfdbHilfsLinie, draw=vfdbHilfsfarbe,
+    /utils/exec={\edef\vfdb@m{\vfdbHilfsMuster}}, vfdb@muster},
+  vfdb flaeche/.style={fill=vfdbGrauFlaeche, draw=none},
+  vfdb flaeche farbig/.style={fill=vfdbFarbe#1, fill opacity=\vfdbFlaecheDeckkraft, draw=none},
+  vfdb flaeche farbig/.default=1,
+  vfdb klein/.style={font=\vfdbKlein},
+}
+% Massspfeil: beidseitig oder einseitig nach stil.yaml (pfeile.mass.beidseitig)
+\ifnum\vfdbMassBeidseitig=1
+  \tikzset{vfdb mass/.style={line width=\vfdbPfeilLinie, draw=vfdbPfeilfarbe,
+    {Triangle[length=\vfdbSpitzeMass, width=\vfdbSpitzeMass, round]}-{Triangle[length=\vfdbSpitzeMass, width=\vfdbSpitzeMass, round]}}}
+\else
+  \tikzset{vfdb mass/.style={line width=\vfdbPfeilLinie, draw=vfdbPfeilfarbe,
+    -{Triangle[length=\vfdbSpitzeMass, width=\vfdbSpitzeMass, round]}}}
+\fi
+
+% --- Schemata ---------------------------------------------------------------------
+% Koordinaten in mm, Ursprung = Schnittpunkt der Achsen.
+% \begin{vfdbschema}[<format>]{<unterer Rand mm>}{<oberer Rand mm>} ... \end{vfdbschema}
+% legt die Abbildungsgroesse exakt fest (Breite des Formats, Hoehe = Raender + Achse).
+% Innerhalb stehen \vfdbB und \vfdbH (Achsenflaeche in mm) zur Verfuegung.
+% Inhalt ausserhalb dieses Rahmens wird abgeschnitten (ohne Warnung) - PDF ansehen.
+\NewDocumentEnvironment{vfdbschema}{O{standard} m m}{%
+  \vfdb@formatpruefung{#1}%
+  \edef\vfdbB{\vfdbWert{#1}{achse_b}}%
+  \edef\vfdbH{\vfdbWert{#1}{achse_h}}%
+  \edef\vfdb@links{\vfdbWert{#1}{rand_links}}%
+  \edef\vfdb@rechts{\vfdbWert{#1}{rand_rechts}}%
+  \begin{tikzpicture}[vfdb]
+  \useasboundingbox (-\vfdb@links, -#2) rectangle (\vfdbB + \vfdb@rechts, \vfdbH + #3);
+}{%
+  \end{tikzpicture}%
+}
+
+% \vfdbPfeilachsen[<Beschriftung Zeitachse>]{<Beschriftung y-Achse>}
+\NewDocumentCommand\vfdbPfeilachsen{O{Zeit $t$} m}{%
+  \draw[vfdb achse] (0,0) -- (\vfdbB, 0);
+  \draw[vfdb achse] (0,0) -- (0, \vfdbH);
+  \node[anchor=north east] at ($(\vfdbB, 0) + (0, -\vfdbTickAbstand)$) {#1};
+  \node[rotate=90, anchor=south] at ($(0, \vfdbH/2) + (-\vfdbTitelAbstandY, 0)$) {#2};
+}
+
+% Beschriftung an der Zeitachse bzw. y-Achse (Tick-Beschriftung, 8 pt)
+\newcommand\vfdbXmarke[2]{\node[anchor=north, font=\vfdbKlein] at ($(#1, 0) + (0, -\vfdbTickAbstand)$) {#2};}
+\newcommand\vfdbYmarke[2]{\node[anchor=mid east, font=\vfdbKlein] at ($(0, #1) + (-\vfdbTickAbstand, 0)$) {#2};}
+
+% \vfdbPhase{<x0>}{<x1>}{<Text>}: Massspfeil der Phase unter der Zeitachse
+\newcommand\vfdbPhase[3]{%
+  \foreach \vfdb@x in {#1, #2}{%
+    \draw[line width=\vfdbPfeilLinie, vfdbPfeilfarbe]
+      (\vfdb@x, -\vfdbPhasenAbstand + \vfdbPhasengrenzeOben) -- (\vfdb@x, -\vfdbPhasenAbstand - \vfdbPhasengrenzeUnten);}
+  \draw[vfdb mass] (#1, -\vfdbPhasenAbstand) -- (#2, -\vfdbPhasenAbstand);
+  \node[anchor=north] at ({(#1 + #2)/2}, -\vfdbPhasenAbstand - \vfdbPhasentext) {#3};
+}
+
+% --- PGFPlots-Diagramme -------------------------------------------------------------
+% \begin{axis}[vfdb=<format>] ... : Achsenflaeche exakt nach Format, Stil wie Python.
+\pgfplotscreateplotcyclelist{vfdb}{%
+  {/tikz/vfdb reihe=1},
+  {/tikz/vfdb reihe=2},
+  {/tikz/vfdb reihe=3},
+  {/tikz/vfdb reihe=4},
+  {/tikz/vfdb reihe=5},
+  {/tikz/vfdb reihe=6},
+  {/tikz/vfdb reihe=7},
+  {/tikz/vfdb reihe=8}%
+}
+\pgfplotsset{
+  vfdb@achsenlinien/.code={%
+    \ifnum\vfdbObenRechts=1 \pgfplotsset{axis lines=box}%
+    \else\pgfplotsset{axis x line*=bottom, axis y line*=left}\fi},
+  vfdb/.style={
+    /utils/exec={\vfdb@formatpruefung{#1}},
+    /tikz/font=\vfdbGross,                    % Direktbeschriftungen im Diagramm: 9 pt
+    scale only axis,
+    width=\vfdbWert{#1}{achse_b}mm, height=\vfdbWert{#1}{achse_h}mm,
+    vfdb@achsenlinien,
+    axis line style={line width=\vfdbAchseLinie, vfdbAchsenfarbe, -},
+    tick align=\vfdbTickAusrichtung, major tick length=\vfdbTickLaenge,
+    every tick/.style={line width=\vfdbTickLinie, vfdbAchsenfarbe},
+    minor tick num=0, xminorticks=\vfdbNebenticks, yminorticks=\vfdbNebenticks,
+    xmajorgrids=\vfdbGitter, ymajorgrids=\vfdbGitter,
+    major grid style={line width=\vfdbGitterLinie, vfdbGitterfarbe},
+    axis on top=\vfdbAchseUeberDaten,
+    tick label style={font=\vfdbKlein, inner sep=0pt},
+    xticklabel style={yshift=-\vfdbTickAbstand},
+    yticklabel style={xshift=-\vfdbTickAbstand},
+    every axis x label/.style={at={(axis description cs:0.5,0)}, yshift=-\vfdbTitelAbstandX,
+      anchor=north, font=\vfdbGross, inner sep=0pt},
+    every axis y label/.style={at={(axis description cs:0,0.5)}, xshift=-\vfdbTitelAbstandY,
+      rotate=90, anchor=south, font=\vfdbGross, inner sep=0pt},
+    % Zahlen an den Achsen (siehe \vfdb@ticklabel); feste Nachkommastellen mit
+    % "vfdb nachkomma x=<n>", "vfdb nachkomma y=<n>" oder "vfdb nachkomma=<n>" (beide)
+    xticklabel={\vfdb@ticklabel{x}}, yticklabel={\vfdb@ticklabel{y}},
+    scaled ticks=false,
+    /pgf/number format/vfdb dezimal, /pgf/number format/1000 sep={},
+    cycle list name=vfdb,
+    /tikz/every mark/.append style={solid}, mark size=\vfdbMarkerRadius,
+    % Fehlerbalken durchgezogen und ohne Endstriche wie in Python (errorbar.capsize = 0)
+    error bars/error bar style={solid, line width=\vfdbDatenLinie}, error bars/error mark=none,
+    enlarge x limits=\vfdbDatenrand, enlarge y limits=\vfdbDatenrand,
+    % Lua-Backend aus: Zahlen mit Dezimalkomma in Tabellen fuehren dann zu einem Fehler
+    % statt stillschweigend zu fehlenden Punkten
+    lua backend=false,
+    % Legende zeilenweise gefuellt (Lesereihenfolge), legend columns = Anzahl Spalten;
+    % "vfdb legende=<Eintraege>" waehlt die Spaltenzahl nach der Stilregel
+    legend columns=\vfdbLegendeSpaltenHoechstens,
+    legend style={draw=\vfdbLegendeRahmen, fill=none, font=\vfdbLegendeSchrift, inner sep=0pt,
+      % feste Zeilenhoehe: Text 0,7 em hoch, 0,25 em tief, Rest als Zeilenabstand
+      nodes={inner sep=0pt, text height=0.7*\vfdbPtLegende pt, text depth=0.25*\vfdbPtLegende pt},
+      row sep=\vfdbLegendeZeile - 0.95*\vfdbPtLegende pt,
+      at={(0.5,0)}, yshift=-\vfdbLegendeAbstand, anchor=north,
+      % Das Liniensymbol belegt seine Laenge plus eine Linienstaerke; die Abstaende werden
+      % darum je um eine halbe Linienstaerke verkuerzt (gleiche Lage wie matplotlib)
+      /tikz/every odd column/.append style={column sep=\vfdbLegendeTextabstand - 0.5*\vfdbDatenLinie},
+      /tikz/every even column/.append style={column sep=\vfdbLegendeSpalten - 0.5*\vfdbDatenLinie}},
+    legend cell align=left,
+    legend image code/.code={\draw[mark repeat=2, mark phase=2, ##1] plot coordinates
+      {(0pt,0pt) (0.5*\vfdbLegendeSymbol,0pt) (\vfdbLegendeSymbol,0pt)};},
+  },
+  vfdb/.default=standard,
+  vfdb legende/.code={\pgfplotsset{legend columns=\vfdb@spaltenfuer{#1}}},
+  vfdb nachkomma x/.code={\def\vfdb@nk@x{#1}},
+  vfdb nachkomma y/.code={\def\vfdb@nk@y{#1}},
+  vfdb nachkomma/.code={\def\vfdb@nk@x{#1}\def\vfdb@nk@y{#1}},
+}
+% Spaltenzahl der Legende fuer <n> Eintraege nach stil.yaml (legende.spalten)
+\newcommand\vfdb@spaltenfuer[1]{%
+  \ifcsname vfdb@spalten@#1\endcsname\csname vfdb@spalten@#1\endcsname
+  \else\csname vfdb@spalten@\vfdbLegendeSpaltenAbEintraegen\endcsname\fi}
+
+% \vfdbRahmen[<format>]{<unterer Rand mm>}{<oberer Rand mm>}: feste Abbildungsgroesse
+% fuer ein tikzpicture mit axis (vor \begin{axis} aufrufen). Unterer Rand: ohne Legende
+% \vfdbWert{standard}{rand_unten}; mit Legende \vfdbRandLegende{<Zeilen>}.
+\NewDocumentCommand\vfdbRahmen{O{standard} m m}{%
+  \vfdb@formatpruefung{#1}%
+  \useasboundingbox (-\vfdbWert{#1}{rand_links}mm, -#2mm) rectangle
+    (\vfdbWert{#1}{achse_b}mm + \vfdbWert{#1}{rand_rechts}mm, \vfdbWert{#1}{achse_h}mm + #3mm);
+}
+% unterer Rand in mm fuer eine Legende mit <Zeilen> Zeilen, z. B. \vfdbRahmen{\vfdbRandLegende{2}}{3}
+\newcommand\vfdbRandLegende[1]{\fpeval{\vfdbLegendeAbstandMM + (#1)*\vfdbLegendeZeileMM + \vfdbLegendeZuschlagMM}}
+% unterer Rand in mm fuer eine Legende mit <n> Eintraegen nach der Spaltenregel
+% (passend zu "vfdb legende=<n>"), z. B. \vfdbRahmen{\vfdbRandEintraege{4}}{3}
+\newcommand\vfdbRandEintraege[1]{%
+  \ifnum#1<1 \vfdbWert{standard}{rand_unten}\else
+  \vfdbRandLegende{\fpeval{ceil((#1)/\vfdb@spaltenfuer{#1})}}\fi}
+
+\endinput
